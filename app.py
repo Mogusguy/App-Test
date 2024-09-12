@@ -1,4 +1,12 @@
-from flask import Flask, render_template_string, redirect, url_for
+from flask import Flask, render_template_string, url_for, redirect
+import os
+import threading
+import tkinter as tk
+from tkinter import Toplevel, Label, Button, Entry
+from PIL import Image, ImageTk
+import time
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
 
 app = Flask(__name__)
 
@@ -16,7 +24,6 @@ html_content = """
             margin: 20px;
             background-color: #008080;
             color: white;
-            position: relative;
         }
 
         iframe {
@@ -26,211 +33,127 @@ html_content = """
             border: none;
         }
 
-        .search-container {
-            margin-bottom: 20px;
-        }
-
-        .search-container input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            font-size: 16px;
-            box-sizing: border-box;
-        }
-
-        .tracks-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: space-between;
-        }
-
-        .track {
-            flex: 1 1 calc(33.333% - 20px);
-            box-sizing: border-box;
-        }
-
-        h1 {
-            color: white;
-            text-align: center;
-        }
-
-        .restart-button, .menu-button, .close-emulator {
-            position: absolute;
-            background-color: red;
-            color: white;
-            padding: 10px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .menu-button {
+        .menu {
+            position: fixed;
             top: 10px;
             left: 10px;
+            background-color: #333;
+            padding: 10px;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
         }
 
-        .restart-button {
-            top: 10px;
-            right: 10px;
-        }
-
-        .emulator-container {
+        .menu-items {
             display: none;
+            flex-direction: column;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: white;
-            color: black;
-            z-index: 1000;
-            padding: 20px;
-            box-sizing: border-box;
+            top: 50px;
+            left: 10px;
+            background-color: #555;
+            padding: 10px;
+            border-radius: 5px;
         }
 
-        .emulator-container iframe {
-            height: calc(100% - 50px);
+        .menu:hover + .menu-items,
+        .menu-items:hover {
+            display: flex;
         }
 
-        .emulator-container .close-emulator {
-            top: 10px;
-            right: 10px;
+        .menu-items a {
+            color: white;
+            text-decoration: none;
+            margin-bottom: 10px;
         }
+
+        .menu-items a:hover {
+            text-decoration: underline;
+        }
+
     </style>
 </head>
 <body>
-    <h1>Check out my Spotify Tracks and Playlists!</h1>
-
-    <!-- Menu Button -->
-    <button class="menu-button" onclick="toggleMenu()">Menu</button>
-
-    <!-- Reload Button -->
-    <form action="/reload" method="post" style="display: inline;">
-        <button class="restart-button" type="submit">Reload Server</button>
-    </form>
-    
-    <!-- Sidebar Menu -->
-    <div id="sidebar" style="display: none;">
-        <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="/emulator">Open Emulator</a></li>
-            <!-- Add other menu items here -->
-        </ul>
+    <div class="menu">☰ Menu</div>
+    <div class="menu-items">
+        <a href="#" onclick="launchEmulator()">Launch Emulator</a>
     </div>
 
-    <!-- Emulator Container -->
-    <div id="emulatorContainer" class="emulator-container">
-        <button class="close-emulator" onclick="closeEmulator()">Close Emulator</button>
-        <iframe src="https://example.com/emulator" allowfullscreen></iframe>
-    </div>
+    <h1>Check out my Spotify Tracks!</h1>
 
-    <div class="search-container">
-        <input type="text" id="searchInput" placeholder="Search for songs..." oninput="filterTracks()">
-    </div>
-
-    <!-- Tracks -->
     <div class="tracks-container" id="tracksContainer">
-        <!-- Your Spotify tracks here -->
+        <div class="track">
+            <iframe src="https://open.spotify.com/embed/track/75IN3CtuZwTHTnZvYM4qnJ" allowfullscreen></iframe>
+        </div>
     </div>
 
     <script>
-        function filterTracks() {
-            const searchInput = document.getElementById('searchInput').value.toLowerCase();
-            const tracks = document.querySelectorAll('.track');
-
-            tracks.forEach(track => {
-                const title = track.getAttribute('data-title').toLowerCase();
-                if (title.includes(searchInput)) {
-                    track.style.display = 'block';
-                } else {
-                    track.style.display = 'none';
-                }
-            });
-        }
-
-        function toggleMenu() {
-            const sidebar = document.getElementById('sidebar');
-            sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
-        }
-
-        function openEmulator() {
-            document.getElementById('emulatorContainer').style.display = 'block';
-        }
-
-        function closeEmulator() {
-            document.getElementById('emulatorContainer').style.display = 'none';
+        function launchEmulator() {
+            fetch('/start-emulator').then(() => alert("Emulator launched!"));
         }
     </script>
 </body>
 </html>
 """
 
-# Main page route
+# Route to serve the main page
 @app.route('/')
 def index():
     return render_template_string(html_content)
 
-# Reload page route
-@app.route('/reload', methods=['POST'])
-def reload():
+# Route to start the emulator (Tkinter)
+@app.route('/start-emulator')
+def start_emulator():
+    threading.Thread(target=main).start()  # Run Tkinter app in a separate thread
     return redirect(url_for('index'))
 
-# Emulator page route
-@app.route('/emulator')
-def emulator():
-    emulator_html = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Emulator</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                margin: 0;
-                padding: 0;
-                background-color: #f0f0f0;
-                color: #333;
-            }
+# Your full Tkinter program here
+def main():
+    global root, score_label, green_box_text, red_box_text
 
-            .emulator-container {
-                position: relative;
-                width: 100%;
-                height: 100vh;
-                padding: 20px;
-                box-sizing: border-box;
-            }
+    root = tk.Tk()
+    root.title("Click Event App")
 
-            .close-emulator {
-                position: absolute;
-                top: 10px;
-                right: 10px;
-                background-color: red;
-                color: white;
-                padding: 10px;
-                border: none;
-                border-radius: 5px;
-                cursor: pointer;
-            }
+    cwd = os.getcwd()  # Get the current working directory (where the script and images are stored)
 
-            iframe {
-                width: 100%;
-                height: calc(100% - 50px);
-                border: none;
-            }
-        </style>
-    </head>
-    <body>
-        <button class="close-emulator" onclick="window.location.href='/'">Close Emulator</button>
-        <!-- Embed your emulator here -->
-        <iframe src="https://example.com/emulator" allowfullscreen></iframe>
-    </body>
-    </html>
-    """
-    return render_template_string(emulator_html)
+    # Load images from the current directory
+    green_box_image_path = os.path.join(cwd, "Green_Button.png")
+    red_box_image_path = os.path.join(cwd, "Red_Button.png")
+    button_image_path = os.path.join(cwd, "OIP.jpg")
+
+    # Load images using PIL and resize them
+    green_box_image = ImageTk.PhotoImage(Image.open(green_box_image_path).resize((100, 100), Image.LANCZOS))
+    red_box_image = ImageTk.PhotoImage(Image.open(red_box_image_path).resize((100, 100), Image.LANCZOS))
+    button_image = ImageTk.PhotoImage(Image.open(button_image_path).resize((100, 100), Image.LANCZOS))
+
+    # Create GUI elements
+    score_label = Label(root, text="Score: 0", font=("Arial", 30))
+    score_label.grid(row=0, column=1, padx=10, pady=10)
+
+    green_box_text = Label(root, text="Click to add more score per click\nCost: 10 score", font=("Arial", 12))
+    green_box_text.grid(row=1, column=0, padx=10, pady=10)
+
+    red_box_text = Label(root, text="Increment per second: +0 score\nCost: 20 score", font=("Arial", 12))
+    red_box_text.grid(row=1, column=2, padx=10, pady=10)
+
+    green_box = Label(root, image=green_box_image, borderwidth=0)
+    green_box.grid(row=2, column=0, padx=10, pady=10)
+    green_box.bind("<Button-1>", on_green_box_click)
+
+    red_box = Label(root, image=red_box_image, borderwidth=0)
+    red_box.grid(row=2, column=2, padx=10, pady=10)
+    red_box.bind("<Button-1>", on_red_box_click)
+
+    button = Button(root, image=button_image, command=on_button_click, borderwidth=0)
+    button.grid(row=2, column=1, padx=10, pady=10)
+
+    high_scores_button = Button(root, text="High Scores", command=open_high_scores)
+    high_scores_button.grid(row=3, column=0, padx=10, pady=10)
+
+    save_score_button = Button(root, text="Save Score", command=open_save_score_window)
+    save_score_button.grid(row=3, column=2, padx=10, pady=10)
+
+    initialize_high_scores()
+    root.mainloop()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
