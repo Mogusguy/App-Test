@@ -1,12 +1,4 @@
-from flask import Flask, render_template_string, url_for, redirect
-import os
-import threading
-import tkinter as tk
-from tkinter import Toplevel, Label, Button, Entry
-from PIL import Image, ImageTk
-import time
-import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from flask import Flask, render_template_string, redirect, url_for
 
 app = Flask(__name__)
 
@@ -17,13 +9,17 @@ html_content = """
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Spotify Playlist</title>
+    <title>My Spotify Playlist and Emulator</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 20px;
             background-color: #008080;
             color: white;
+        }
+
+        h1, h2 {
+            text-align: center;
         }
 
         iframe {
@@ -70,6 +66,37 @@ html_content = """
             text-decoration: underline;
         }
 
+        .tracks-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .track {
+            text-align: center;
+            flex: 1 1 calc(33.333% - 20px);
+            box-sizing: border-box;
+        }
+
+        .track-title {
+            margin-top: 10px;
+            font-size: 18px;
+            color: white;
+        }
+
+        .restart-button {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: red;
+            color: white;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -78,82 +105,139 @@ html_content = """
         <a href="#" onclick="launchEmulator()">Launch Emulator</a>
     </div>
 
-    <h1>Check out my Spotify Tracks!</h1>
+    <h1>Check out my Spotify Tracks and Playlists!</h1>
+    <h2>Enjoy Some Music While You Play</h2>
 
+    <!-- Reload Button -->
+    <form action="/reload" method="post">
+        <button class="restart-button" type="submit">Reload Server</button>
+    </form>
+
+    <div class="search-container">
+        <input type="text" id="searchInput" placeholder="Search for songs..." oninput="filterTracks()">
+    </div>
+
+    <!-- Tracks -->
     <div class="tracks-container" id="tracksContainer">
-        <div class="track">
+        <div class="track" data-title="My Name Is">
             <iframe src="https://open.spotify.com/embed/track/75IN3CtuZwTHTnZvYM4qnJ" allowfullscreen></iframe>
+            <div class="track-title">My Name Is - Eminem</div>
+        </div>
+
+        <div class="track" data-title="The Real Slim Shady">
+            <iframe src="https://open.spotify.com/embed/track/3yfqSUWxFvZELEM4PmlwIR" allowfullscreen></iframe>
+            <div class="track-title">The Real Slim Shady - Eminem</div>
+        </div>
+
+        <div class="track" data-title="Double Life">
+            <iframe src="https://open.spotify.com/embed/track/07oO1U722crtVcavi6frX6" allowfullscreen></iframe>
+            <div class="track-title">Double Life - Unknown Artist</div>
+        </div>
+
+        <div class="track" data-title="gegage">
+            <iframe src="https://open.spotify.com/embed/track/7LnI49wTeiBIwaCJjc07vS" allowfullscreen></iframe>
+            <div class="track-title">gegage - Unknown Artist</div>
+        </div>
+
+        <div class="track" data-title="Wii Shop Channel">
+            <iframe src="https://open.spotify.com/embed/track/6d031ugbPZHSYTsY2sTDJT" allowfullscreen></iframe>
+            <div class="track-title">Wii Shop Channel - Unknown Artist</div>
+        </div>
+
+        <div class="track" data-title="All Star">
+            <iframe src="https://open.spotify.com/embed/track/3cfOd4CMv2snFaKAnMdnvK" allowfullscreen></iframe>
+            <div class="track-title">All Star - Smash Mouth</div>
+        </div>
+
+        <div class="track" data-title="Gangsta's Paradise">
+            <iframe src="https://open.spotify.com/embed/track/1DIXPcTDzTj8ZMHt3PDt8p" allowfullscreen></iframe>
+            <div class="track-title">Gangsta's Paradise - Coolio</div>
         </div>
     </div>
 
     <script>
+        function filterTracks() {
+            const searchInput = document.getElementById('searchInput').value.toLowerCase();
+            const tracks = document.querySelectorAll('.track');
+
+            tracks.forEach(track => {
+                const title = track.getAttribute('data-title').toLowerCase();
+                if (title.includes(searchInput)) {
+                    track.style.display = 'block';
+                } else {
+                    track.style.display = 'none';
+                }
+            });
+        }
+
         function launchEmulator() {
-            fetch('/start-emulator').then(() => alert("Emulator launched!"));
+            window.open('/emulator', '_blank');
         }
     </script>
 </body>
 </html>
 """
 
-# Route to serve the main page
 @app.route('/')
 def index():
     return render_template_string(html_content)
 
-# Route to start the emulator (Tkinter)
-@app.route('/start-emulator')
-def start_emulator():
-    threading.Thread(target=main).start()  # Run Tkinter app in a separate thread
+@app.route('/reload', methods=['POST'])
+def reload():
+    # Reload the page (client-side action)
     return redirect(url_for('index'))
 
-# Your full Tkinter program here
-def main():
-    global root, score_label, green_box_text, red_box_text
-
-    root = tk.Tk()
-    root.title("Click Event App")
-
-    cwd = os.getcwd()  # Get the current working directory (where the script and images are stored)
-
-    # Load images from the current directory
-    green_box_image_path = os.path.join(cwd, "Green_Button.png")
-    red_box_image_path = os.path.join(cwd, "Red_Button.png")
-    button_image_path = os.path.join(cwd, "OIP.jpg")
-
-    # Load images using PIL and resize them
-    green_box_image = ImageTk.PhotoImage(Image.open(green_box_image_path).resize((100, 100), Image.LANCZOS))
-    red_box_image = ImageTk.PhotoImage(Image.open(red_box_image_path).resize((100, 100), Image.LANCZOS))
-    button_image = ImageTk.PhotoImage(Image.open(button_image_path).resize((100, 100), Image.LANCZOS))
-
-    # Create GUI elements
-    score_label = Label(root, text="Score: 0", font=("Arial", 30))
-    score_label.grid(row=0, column=1, padx=10, pady=10)
-
-    green_box_text = Label(root, text="Click to add more score per click\nCost: 10 score", font=("Arial", 12))
-    green_box_text.grid(row=1, column=0, padx=10, pady=10)
-
-    red_box_text = Label(root, text="Increment per second: +0 score\nCost: 20 score", font=("Arial", 12))
-    red_box_text.grid(row=1, column=2, padx=10, pady=10)
-
-    green_box = Label(root, image=green_box_image, borderwidth=0)
-    green_box.grid(row=2, column=0, padx=10, pady=10)
-    green_box.bind("<Button-1>", on_green_box_click)
-
-    red_box = Label(root, image=red_box_image, borderwidth=0)
-    red_box.grid(row=2, column=2, padx=10, pady=10)
-    red_box.bind("<Button-1>", on_red_box_click)
-
-    button = Button(root, image=button_image, command=on_button_click, borderwidth=0)
-    button.grid(row=2, column=1, padx=10, pady=10)
-
-    high_scores_button = Button(root, text="High Scores", command=open_high_scores)
-    high_scores_button.grid(row=3, column=0, padx=10, pady=10)
-
-    save_score_button = Button(root, text="Save Score", command=open_save_score_window)
-    save_score_button.grid(row=3, column=2, padx=10, pady=10)
-
-    initialize_high_scores()
-    root.mainloop()
+@app.route('/emulator')
+def emulator():
+    return '''
+        <!DOCTYPE html>
+        <html lang="en">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Emulator</title>
+            <style>
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    background-color: #f0f0f0;
+                }
+                .emulator-container {
+                    width: 100%;
+                    max-width: 800px;
+                    margin: 0 auto;
+                    background-color: #fff;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+                }
+                .close-button {
+                    background-color: red;
+                    color: white;
+                    border: none;
+                    padding: 10px;
+                    border-radius: 5px;
+                    cursor: pointer;
+                    float: right;
+                }
+                .emulator-content {
+                    margin-top: 20px;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="emulator-container">
+                <button class="close-button" onclick="window.close()">Close Emulator</button>
+                <div class="emulator-content">
+                    <h1>Emulator Example</h1>
+                    <p>This is where the emulator content will be displayed.</p>
+                    <!-- Add your emulator content here -->
+                </div>
+            </div>
+        </body>
+        </html>
+    '''
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
