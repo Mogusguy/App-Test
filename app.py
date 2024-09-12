@@ -23,6 +23,7 @@ html_content = """
             max-width: 300px;
             height: 380px;
             border: none;
+            box-sizing: border-box; /* Ensure padding and border are included in the width */
         }
 
         .search-container {
@@ -42,12 +43,13 @@ html_content = """
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
-            justify-content: space-between;
+            justify-content: center; /* Center align the tracks */
         }
 
         .track {
-            flex: 1 1 calc(33.333% - 20px);
+            flex: 1 1 calc(33.333% - 20px); /* 3 items per row on larger screens */
             box-sizing: border-box;
+            max-width: 300px; /* Max width for each track box */
         }
 
         h1 {
@@ -67,10 +69,22 @@ html_content = """
             cursor: pointer;
         }
 
+        /* Responsive Design for Mobile Devices */
+        @media (max-width: 768px) {
+            .track {
+                flex: 1 1 calc(50% - 20px); /* 2 items per row on medium screens */
+            }
+        }
+
+        @media (max-width: 480px) {
+            .track {
+                flex: 1 1 100%; /* 1 item per row on small screens */
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Check out my Spotify Tracks and Playlists!</h1>
+    <h1>Check out my Spotify Tracks and Playlists! oh and btw Yes this is Antons website Whatever you do DO NOT CLICK THE RELOAD SERVER OR IT WILL CRASH THE SERVER</h1>
 
     <!-- Reload Button -->
     <form action="/reload" method="post">
@@ -95,20 +109,20 @@ html_content = """
             <iframe src="https://open.spotify.com/embed/track/07oO1U722crtVcavi6frX6" allowfullscreen></iframe>
         </div>
 
-        <div class="track" data-title="Test 1">
-            <iframe src="https://open.spotify.com/embed/track/6jJ0s89eD6GaHleKKya26X" allowfullscreen></iframe>
+        <div class="track" data-title="gegage">
+            <iframe src="https://open.spotify.com/embed/track/7LnI49wTeiBIwaCJjc07vS" allowfullscreen></iframe>
         </div>
 
-        <div class="track" data-title="Test 2">
-            <iframe src="https://open.spotify.com/embed/track/1xznGGDReH1oQq0xzbwXa3" allowfullscreen></iframe>
+        <div class="track" data-title="Wii shop channel">
+            <iframe src="https://open.spotify.com/embed/track/6d031ugbPZHSYTsY2sTDJT" allowfullscreen></iframe>
         </div>
 
-        <div class="track" data-title="Test 4">
-            <iframe src="https://open.spotify.com/embed/track/4VqPOruhp5EdPBeR92t6lQ" allowfullscreen></iframe>
+        <div class="track" data-title="All star">
+            <iframe src="https://open.spotify.com/embed/track/3cfOd4CMv2snFaKAnMdnvK" allowfullscreen></iframe>
         </div>
 
-        <div class="track" data-title="Test 4">
-            <iframe src="https://open.spotify.com/embed/track/4VqPOruhp5EdPBeR92t6lQ" allowfullscreen></iframe>
+        <div class="track" data-title="Gangstas paradise">
+            <iframe src="https://open.spotify.com/embed/track/1DIXPcTDzTj8ZMHt3PDt8p" allowfullscreen></iframe>
         </div>
     </div>
 
