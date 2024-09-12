@@ -16,6 +16,7 @@ html_content = """
             margin: 20px;
             background-color: #008080;
             color: white;
+            position: relative;
         }
 
         iframe {
@@ -23,7 +24,6 @@ html_content = """
             max-width: 300px;
             height: 380px;
             border: none;
-            box-sizing: border-box; /* Ensure padding and border are included in the width */
         }
 
         .search-container {
@@ -43,13 +43,12 @@ html_content = """
             display: flex;
             flex-wrap: wrap;
             gap: 20px;
-            justify-content: center; /* Center align the tracks */
+            justify-content: space-between;
         }
 
         .track {
-            flex: 1 1 calc(33.333% - 20px); /* 3 items per row on larger screens */
+            flex: 1 1 calc(33.333% - 20px);
             box-sizing: border-box;
-            max-width: 300px; /* Max width for each track box */
         }
 
         h1 {
@@ -57,10 +56,8 @@ html_content = """
             text-align: center;
         }
 
-        .restart-button {
+        .restart-button, .menu-button, .close-emulator {
             position: absolute;
-            top: 10px;
-            right: 10px;
             background-color: red;
             color: white;
             padding: 10px;
@@ -69,61 +66,73 @@ html_content = """
             cursor: pointer;
         }
 
-        /* Responsive Design for Mobile Devices */
-        @media (max-width: 768px) {
-            .track {
-                flex: 1 1 calc(50% - 20px); /* 2 items per row on medium screens */
-            }
+        .menu-button {
+            top: 10px;
+            left: 10px;
         }
 
-        @media (max-width: 480px) {
-            .track {
-                flex: 1 1 100%; /* 1 item per row on small screens */
-            }
+        .restart-button {
+            top: 10px;
+            right: 10px;
+        }
+
+        .emulator-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: white;
+            color: black;
+            z-index: 1000;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .emulator-container iframe {
+            height: calc(100% - 50px);
+        }
+
+        .emulator-container .close-emulator {
+            top: 10px;
+            right: 10px;
         }
     </style>
 </head>
 <body>
-    <h1>Check out my Spotify Tracks and Playlists! oh and btw Yes this is Antons website Whatever you do DO NOT CLICK THE RELOAD SERVER OR IT WILL CRASH THE SERVER</h1>
+    <h1>Check out my Spotify Tracks and Playlists!</h1>
+
+    <!-- Menu Button -->
+    <button class="menu-button" onclick="toggleMenu()">Menu</button>
 
     <!-- Reload Button -->
-    <form action="/reload" method="post">
+    <form action="/reload" method="post" style="display: inline;">
         <button class="restart-button" type="submit">Reload Server</button>
     </form>
     
+    <!-- Sidebar Menu -->
+    <div id="sidebar" style="display: none;">
+        <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/emulator">Open Emulator</a></li>
+            <!-- Add other menu items here -->
+        </ul>
+    </div>
+
+    <!-- Emulator Container -->
+    <div id="emulatorContainer" class="emulator-container">
+        <button class="close-emulator" onclick="closeEmulator()">Close Emulator</button>
+        <iframe src="https://example.com/emulator" allowfullscreen></iframe>
+    </div>
+
     <div class="search-container">
         <input type="text" id="searchInput" placeholder="Search for songs..." oninput="filterTracks()">
     </div>
 
     <!-- Tracks -->
     <div class="tracks-container" id="tracksContainer">
-        <div class="track" data-title="My Name Is">
-            <iframe src="https://open.spotify.com/embed/track/75IN3CtuZwTHTnZvYM4qnJ" allowfullscreen></iframe>
-        </div>
-
-        <div class="track" data-title="The Real Slim Shady">
-            <iframe src="https://open.spotify.com/embed/track/3yfqSUWxFvZELEM4PmlwIR" allowfullscreen></iframe>
-        </div>
-
-        <div class="track" data-title="Double life">
-            <iframe src="https://open.spotify.com/embed/track/07oO1U722crtVcavi6frX6" allowfullscreen></iframe>
-        </div>
-
-        <div class="track" data-title="gegage">
-            <iframe src="https://open.spotify.com/embed/track/7LnI49wTeiBIwaCJjc07vS" allowfullscreen></iframe>
-        </div>
-
-        <div class="track" data-title="Wii shop channel">
-            <iframe src="https://open.spotify.com/embed/track/6d031ugbPZHSYTsY2sTDJT" allowfullscreen></iframe>
-        </div>
-
-        <div class="track" data-title="All star">
-            <iframe src="https://open.spotify.com/embed/track/3cfOd4CMv2snFaKAnMdnvK" allowfullscreen></iframe>
-        </div>
-
-        <div class="track" data-title="Gangstas paradise">
-            <iframe src="https://open.spotify.com/embed/track/1DIXPcTDzTj8ZMHt3PDt8p" allowfullscreen></iframe>
-        </div>
+        <!-- Your Spotify tracks here -->
     </div>
 
     <script>
@@ -140,19 +149,88 @@ html_content = """
                 }
             });
         }
+
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function openEmulator() {
+            document.getElementById('emulatorContainer').style.display = 'block';
+        }
+
+        function closeEmulator() {
+            document.getElementById('emulatorContainer').style.display = 'none';
+        }
     </script>
 </body>
 </html>
 """
 
+# Main page route
 @app.route('/')
 def index():
     return render_template_string(html_content)
 
+# Reload page route
 @app.route('/reload', methods=['POST'])
 def reload():
-    # Reload the page (client-side action)
     return redirect(url_for('index'))
+
+# Emulator page route
+@app.route('/emulator')
+def emulator():
+    emulator_html = """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Emulator</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f0f0f0;
+                color: #333;
+            }
+
+            .emulator-container {
+                position: relative;
+                width: 100%;
+                height: 100vh;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+
+            .close-emulator {
+                position: absolute;
+                top: 10px;
+                right: 10px;
+                background-color: red;
+                color: white;
+                padding: 10px;
+                border: none;
+                border-radius: 5px;
+                cursor: pointer;
+            }
+
+            iframe {
+                width: 100%;
+                height: calc(100% - 50px);
+                border: none;
+            }
+        </style>
+    </head>
+    <body>
+        <button class="close-emulator" onclick="window.location.href='/'">Close Emulator</button>
+        <!-- Embed your emulator here -->
+        <iframe src="https://example.com/emulator" allowfullscreen></iframe>
+    </body>
+    </html>
+    """
+    return render_template_string(emulator_html)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
